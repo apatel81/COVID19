@@ -1,0 +1,145 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+###COVID-19###
+```{r}
+library(tidyverse)
+covid <- read.csv("/Users/ajaypatel21/Downloads/covid-19-data-master/us-states.csv")
+covid
+```
+
+### Adding averages, sums of deaths/cases, and variance of deaths ###
+```{r}
+all_covid <- covid %>%
+  group_by(state) %>%
+  summarise(avg_deaths = mean(deaths), 
+            total_deaths = sum(deaths), 
+            total_cases = sum(cases),
+            n_days = n(), 
+            var_deaths = var(deaths)) %>%
+  arrange(avg_deaths)
+
+all_covid
+```
+
+### Filtering by month and string manipulation ###
+```{r}
+covid %>% 
+  filter(str_detect(covid$date, c("2020-05", "2020-06")) == T) %>%
+  filter(deaths > 0) %>%
+  filter(state == "California") %>%
+  ggplot(aes(x=date, y=deaths)) + facet_wrap(~state) + geom_point() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Differnet way to manipulate strings 
+# test %>%
+#   filter(grepl("2020-05", test$date) == T)
+
+# For - Loop that prints deaths in May & June
+# temp <- test %>%
+#   filter(str_detect(test$date, c("2020-05", "2020-06")) == T)
+# 
+# for (i in unique(temp$state))
+# {
+#   temp_state <- temp %>% 
+#     filter(state == i) 
+#   
+#   print(ggplot(temp_state, aes(x=date, y=deaths)) + geom_point() + ggtitle(i) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1)))
+# }
+```
+
+```{r}
+covid %>% 
+  filter(str_detect(covid$date, c("2020-05", "2020-06")) == T) %>%
+  filter(deaths > 0) %>%
+  filter(state == state) 
+```
+
+### Adding New Cases by Day Variable ###
+```{r}
+temp <- covid %>%
+  arrange(state)
+
+for (i in 1:dim(temp)[1])
+{
+  if (i == 1)
+  {
+    temp[i, "new_cases"] <- temp[i, "cases"]
+  }
+  else if (temp[i, "state"] != temp[i-1, "state"])
+  {
+    temp[i, "new_cases"] <- temp[i, "cases"]
+  }
+  else
+  {
+    temp[i, "new_cases"] <- temp[i, "cases"] - temp[i-1, "cases"]
+  }
+}
+
+temp
+```
+
+
+### Plotly ShinyApp: Viewing New Cases and/or Deaths Over Time by State ###
+```{r}
+library(shiny)
+library(plotly)
+
+# cal <- covid %>% 
+#   # filter(str_detect(covid$date, c("2020-05", "2020-06")) == T) %>%
+#   filter(deaths > 0) %>%
+#   filter(state == "California") 
+# 
+# ny <- covid %>% 
+#   # filter(str_detect(covid$date, c("2020-05", "2020-06")) == T) %>%
+#   filter(deaths > 0) %>%
+#   filter(state == "New York") 
+# 
+# California <- plot_ly(cal, x=~date, y=~deaths)
+# `New York` <- plot_ly(ny, x=~date, y=~deaths)
+
+`Deaths` <- plot_ly(covid, x=~date, y=~deaths, color=~state)
+`New Cases` <- plot_ly(temp, x=~date, y=~new_cases, color=~state)
+
+ui <-shinyUI(fluidPage(selectInput("selectPlot", "Choose Desired Plot",
+                                   choices=c("Deaths", "New Cases")), plotlyOutput("plot")))
+
+# ui <-shinyUI(fluidPage(test))
+
+server <- shinyServer(function(input,output)
+{      
+  output$plot <- renderPlotly(
+  {
+    return(get(input$selectPlot)) # get("p1") from the workspace returns the object p1, which is a plotly object
+  })
+})
+
+shinyApp(ui,server)
+```
+
+
+### County Data ###
+```{r}
+counties <- read.csv("/Users/ajaypatel21/Downloads/covid-19-data-master/us-counties.csv")
+counties
+
+counties %>% 
+  filter(str_detect(covid$date, c("2020-04", "2020-06")) == T) %>%
+  # filter(deaths > 0) %>%
+  filter(county == "Fresno") %>%
+  ggplot(aes(x=date, y=deaths, group=1)) + geom_point() + geom_line() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r}
+
+```
+
+
+
+
